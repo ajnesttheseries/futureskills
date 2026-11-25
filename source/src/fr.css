@@ -253,3 +253,4 @@
 .sk .rcl{display:none}
 .sk.alt .rcl{display:grid;animation:rclIn .5s cubic-bezier(.2,1.3,.4,1) both}
 @keyframes rclIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+.fr-cover .col>h1:first-child{margin-top:200px}
