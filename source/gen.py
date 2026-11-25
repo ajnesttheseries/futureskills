@@ -25,7 +25,6 @@ F = [  # letter, key, en, th, color, slide id
 # 1 COVER
 add('COVER', f'''<section class="slide s-title fr-cover" data-scene='{sc("blue",1,3.6,0,1.15,"wave",[{"type":"sparkles"},{"type":"stairs","x":2.6,"y":-0.6,"z":-0.8,"s":0.8}])}'>
   <div class="col">
-    <div class="kicker a" style="--d:.1s">KEYNOTE · 45 นาที</div>
     <h1 class="a" style="--d:.25s">Future-Ready Skills</h1>
     <h1 class="hl mid a" style="--d:.45s">ทักษะแห่งอนาคต</h1>
     <p class="lead a" style="--d:.65s">สู่ความสำเร็จในยุค AI</p>
