@@ -250,3 +250,6 @@
 .pln{display:flex;align-items:center;gap:14px;padding:7px 0;border-bottom:1px dashed #cfd4f5}.pln:last-child{border-bottom:none}
 .pln>b{width:44px;height:44px;font-size:24px;border-radius:12px}.pln span{font:600 28px/1.35 'Prompt'}
 .flq,.fla{min-height:400px}
+.sk .rcl{display:none}
+.sk.alt .rcl{display:grid;animation:rclIn .5s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes rclIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
