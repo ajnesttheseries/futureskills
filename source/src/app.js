@@ -71,6 +71,13 @@ function runTimer(b) {
   const show = () => b.textContent = '⏱ ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') + ' · กดเพื่อหยุด';
   show(); b._iv = setInterval(() => { left--; show(); if (left <= 0) { clearInterval(b._iv); b._iv = null; b.classList.remove('run'); b.classList.add('done'); b.textContent = '⏰ หมดเวลา!'; } }, 1000);
 }
+function fullReset(s) {
+  resetSlide(s);
+  s.querySelectorAll('.stp, .hnt').forEach(b => b.classList.remove('done'));
+  s.querySelectorAll('.pgl.on').forEach(x => x.classList.remove('on')); s.querySelectorAll('.ppl').forEach(p => p.dataset.hl = '');
+  s.querySelectorAll('.scr').forEach(r => { r.dataset.v = ''; r.querySelectorAll('button').forEach(b => b.classList.remove('on')); });
+  if (s.querySelector('.radar')) drawRadar(s);
+}
 function resetSlide(s) {
   s.querySelectorAll('[data-st].on, .qo, .hnt, s[data-n].on, .flip.on, .idea.on').forEach(e => e.classList.remove('on', 'picked', 'right'));
   s.classList.remove('answered', 'alt');
@@ -95,11 +102,11 @@ document.addEventListener('click', e => {
 });
 
 const counter = document.getElementById('counter'), bar = document.getElementById('bar'), notesEl = document.getElementById('notes');
-function go(n) {
+function go(n, back) {
   n = Math.max(0, Math.min(slides.length - 1, n)); if (n === cur) return;
   const prev = slides[cur]; if (prev) { prev.classList.remove('active'); prev.classList.add('leaving'); setTimeout(() => prev.classList.remove('leaving'), 700); }
   cur = n; const s = slides[n];
-  resetSlide(s); s.dataset.k = 0; void s.offsetWidth; s.classList.add('active');
+  fullReset(s); s.dataset.k = 0; void s.offsetWidth; s.classList.add('active');
   const cfg = JSON.parse(s.dataset.scene || '{}');
   setBg(cfg.bg || 'light'); stage.classList.toggle('dark', !!cfg.dark);
   world && world.setScene(cfg);
@@ -113,24 +120,26 @@ function go(n) {
   bc.postMessage({ n, mainN: N, notes: NOTES[n] || '', next: slides[n + 1] ? (slides[n + 1].querySelector('h2,h1,.skn')?.textContent || '') : '—' });
   notesEl.querySelector('.nt').textContent = NOTES[n] || '';
   history.replaceState(null, '', '#' + (n + 1));
+  if (back && STEPS[s.dataset.id]) replayTo(s, STEPS[s.dataset.id].length);
 }
 
 // ── step mode: → / PageDown / Space / click (clicker friendly) runs the slide's next step before moving on ──
 const q1 = (s, sel) => s.querySelector(sel);
 const clickIf = (el) => { if (!el) return false; el.click(); return true; };
 const stopTimer = s => s.querySelectorAll('.tmr').forEach(t => { if (t._iv) t.click(); });
+let replaying = false;
 const STEPS = {
   HOOK: [1, 2, 3, 4].map(() => s => clickIf(q1(s, '.stp:not(.done)'))),
   QUIZ: [s => s.classList.contains('answered') ? false : clickIf(q1(s, '.qo[data-ok="1"]'))],
   PPL: [0, 1, 2, 3].map(g => s => { const el = s.querySelectorAll('.pgl')[g]; if (!el || el.classList.contains('on')) return false; el.click(); return true; })
        .concat([s => clickIf(q1(s, '.pgl.on'))]),
   SF: [s => s.classList.contains('alt') ? false : clickIf(s.querySelectorAll('.tgb')[1])],
-  SU: [s => { const t = q1(s, '.tmr'); if (!t || t._iv || t.classList.contains('done') || q1(s, 's[data-n].on')) return false; t.click(); return true; }]
+  SU: [s => { if (replaying) return true; const t = q1(s, '.tmr'); if (!t || t._iv || t.classList.contains('done') || q1(s, 's[data-n].on')) return false; t.click(); return true; }]
        .concat([1, 2, 3].map(() => s => { stopTimer(s); return clickIf(q1(s, '.hnt:not(.done)')); })),
   SR: [0, 1, 2].map(k => s => { const f = s.querySelectorAll('.flip')[k]; if (!f || f.classList.contains('on')) return false; f.click(); return true; }),
   SE: [s => s.classList.contains('alt') ? false : clickIf(s.querySelectorAll('.tgb')[1])],
   CHECK: [s => { if ([...s.querySelectorAll('.scr')].every(r => r.dataset.v)) return false; [4, 2, 3, 3, 4, 5].forEach((v, i) => { const r = s.querySelectorAll('.scr')[i]; if (!r.dataset.v) r.querySelectorAll('button')[v - 1].click(); }); return true; }],
-  PLAN: [s => { const t = q1(s, '.tmr'); if (!t || t._iv || t.classList.contains('done')) return false; t.click(); return true; }],
+  PLAN: [s => { if (replaying) return true; const t = q1(s, '.tmr'); if (!t || t._iv || t.classList.contains('done')) return false; t.click(); return true; }],
 };
 const dotsEl = document.getElementById('stepdots');
 function drawDots() {
@@ -145,7 +154,13 @@ function runStep() {
   while (k < fns.length) { const r = fns[k](s); k++; s.dataset.k = k; if (r !== false) { drawDots(); return true; } }
   drawDots(); return false;
 }
-const next = () => { if (!runStep()) go(cur + 1); }, prevS = () => go(cur - 1);
+function replayTo(s, t) {
+  const fns = STEPS[s.dataset.id]; fullReset(s); replaying = true;
+  try { for (let i = 0; i < t; i++) fns[i](s); } finally { replaying = false; }
+  s.dataset.k = t; drawDots();
+}
+const next = () => { if (!runStep()) go(cur + 1); };
+const prevS = () => { const s = slides[cur], fns = STEPS[s.dataset.id], k = +s.dataset.k || 0; if (fns && k > 0) { replayTo(s, k - 1); return; } go(cur - 1, true); };
 window.__go = go; window.__next = next; window.__prev = prevS;
 document.addEventListener('keydown', e => {
   const t = e.target; if (t && t.closest && t.closest('input,select,textarea')) return;

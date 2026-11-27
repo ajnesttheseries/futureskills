@@ -306,7 +306,7 @@ STEPNOTE = {
  'PLAN': 'กด → 1 ครั้ง: เริ่มจับเวลา 60 วินาที',
 }
 for i, sid in enumerate(IDS):
-    if sid in STEPNOTE: NOTES[i] += '\n\n⌨ ' + STEPNOTE[sid] + ' แล้วกด → อีกครั้งเพื่อไปหน้าถัดไป (จุดมุมขวาล่างบอกว่าเหลือกี่ขั้น)'
+    if sid in STEPNOTE: NOTES[i] += '\n\n⌨ ' + STEPNOTE[sid] + ' แล้วกด → อีกครั้งเพื่อไปหน้าถัดไป · กด ← ย้อนทีละขั้น (จุดมุมขวาล่างบอกว่าเหลือกี่ขั้น)'
 
 open('src/slides.html', 'w', encoding='utf-8').write('\n'.join(S))
 json.dump({'ids': IDS, 'notes': NOTES}, open('notes.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
