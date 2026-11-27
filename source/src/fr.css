@@ -257,3 +257,9 @@
 .ab27{color:#2f2ff0;font-weight:700}
 .ab27{color:#ffd23f;font-style:normal;font-weight:700}
 #counter{display:none!important}
+#stepdots{position:absolute;right:110px;bottom:16px;z-index:6;display:flex;align-items:center;gap:7px;opacity:0;transition:opacity .3s;pointer-events:none}
+#stepdots.on{opacity:.8}
+#stepdots i{width:12px;height:12px;border-radius:50%;border:2px solid #2f2ff0;background:transparent}
+#stepdots i.d{background:#2f2ff0}
+#stepdots span{font:700 17px 'Prompt';color:#2f2ff0;margin-left:6px}
+#stage.dark #stepdots i{border-color:#ffd23f}#stage.dark #stepdots i.d{background:#ffd23f}#stage.dark #stepdots span{color:#ffd23f}

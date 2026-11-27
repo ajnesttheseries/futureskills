@@ -99,7 +99,7 @@ function go(n) {
   n = Math.max(0, Math.min(slides.length - 1, n)); if (n === cur) return;
   const prev = slides[cur]; if (prev) { prev.classList.remove('active'); prev.classList.add('leaving'); setTimeout(() => prev.classList.remove('leaving'), 700); }
   cur = n; const s = slides[n];
-  resetSlide(s); void s.offsetWidth; s.classList.add('active');
+  resetSlide(s); s.dataset.k = 0; void s.offsetWidth; s.classList.add('active');
   const cfg = JSON.parse(s.dataset.scene || '{}');
   setBg(cfg.bg || 'light'); stage.classList.toggle('dark', !!cfg.dark);
   world && world.setScene(cfg);
@@ -108,12 +108,44 @@ function go(n) {
   const N = slides.length;
   counter.textContent = String(n + 1).padStart(2, '0') + ' / ' + N;
   const cr = document.getElementById('credit'); cr.classList.toggle('on', n >= 2 && n < N - 1);
+  typeof drawDots === 'function' && dotsEl && drawDots();
   bar.style.width = (n + 1) / N * 100 + '%';
   bc.postMessage({ n, mainN: N, notes: NOTES[n] || '', next: slides[n + 1] ? (slides[n + 1].querySelector('h2,h1,.skn')?.textContent || '') : '—' });
   notesEl.querySelector('.nt').textContent = NOTES[n] || '';
   history.replaceState(null, '', '#' + (n + 1));
 }
-const next = () => go(cur + 1), prevS = () => go(cur - 1);
+
+// ── step mode: → / PageDown / Space / click (clicker friendly) runs the slide's next step before moving on ──
+const q1 = (s, sel) => s.querySelector(sel);
+const clickIf = (el) => { if (!el) return false; el.click(); return true; };
+const stopTimer = s => s.querySelectorAll('.tmr').forEach(t => { if (t._iv) t.click(); });
+const STEPS = {
+  HOOK: [1, 2, 3, 4].map(() => s => clickIf(q1(s, '.stp:not(.done)'))),
+  QUIZ: [s => s.classList.contains('answered') ? false : clickIf(q1(s, '.qo[data-ok="1"]'))],
+  PPL: [0, 1, 2, 3].map(g => s => { const el = s.querySelectorAll('.pgl')[g]; if (!el || el.classList.contains('on')) return false; el.click(); return true; })
+       .concat([s => clickIf(q1(s, '.pgl.on'))]),
+  SF: [s => s.classList.contains('alt') ? false : clickIf(s.querySelectorAll('.tgb')[1])],
+  SU: [s => { const t = q1(s, '.tmr'); if (!t || t._iv || t.classList.contains('done') || q1(s, 's[data-n].on')) return false; t.click(); return true; }]
+       .concat([1, 2, 3].map(() => s => { stopTimer(s); return clickIf(q1(s, '.hnt:not(.done)')); })),
+  SR: [0, 1, 2].map(k => s => { const f = s.querySelectorAll('.flip')[k]; if (!f || f.classList.contains('on')) return false; f.click(); return true; }),
+  SE: [s => s.classList.contains('alt') ? false : clickIf(s.querySelectorAll('.tgb')[1])],
+  CHECK: [s => { if ([...s.querySelectorAll('.scr')].every(r => r.dataset.v)) return false; [4, 2, 3, 3, 4, 5].forEach((v, i) => { const r = s.querySelectorAll('.scr')[i]; if (!r.dataset.v) r.querySelectorAll('button')[v - 1].click(); }); return true; }],
+  PLAN: [s => { const t = q1(s, '.tmr'); if (!t || t._iv || t.classList.contains('done')) return false; t.click(); return true; }],
+};
+const dotsEl = document.getElementById('stepdots');
+function drawDots() {
+  const s = slides[cur], fns = STEPS[s.dataset.id];
+  if (!fns) { dotsEl.innerHTML = ''; dotsEl.classList.remove('on'); return; }
+  const k = +s.dataset.k || 0; dotsEl.classList.add('on');
+  dotsEl.innerHTML = fns.map((_, i) => `<i class="${i < k ? 'd' : ''}"></i>`).join('') + `<span>${k < fns.length ? '→ ขั้นถัดไป' : '→ หน้าถัดไป'}</span>`;
+}
+function runStep() {
+  const s = slides[cur], fns = STEPS[s.dataset.id]; if (!fns) return false;
+  let k = +s.dataset.k || 0;
+  while (k < fns.length) { const r = fns[k](s); k++; s.dataset.k = k; if (r !== false) { drawDots(); return true; } }
+  drawDots(); return false;
+}
+const next = () => { if (!runStep()) go(cur + 1); }, prevS = () => go(cur - 1);
 window.__go = go; window.__next = next; window.__prev = prevS;
 document.addEventListener('keydown', e => {
   const t = e.target; if (t && t.closest && t.closest('input,select,textarea')) return;
@@ -131,7 +163,7 @@ let tx = null; window.addEventListener('touchstart', e => tx = e.touches[0].clie
 window.addEventListener('touchend', e => { if (tx === null) return; const d = e.changedTouches[0].clientX - tx; if (Math.abs(d) > 50) d < 0 ? next() : prevS(); tx = null; });
 const timerEl = document.getElementById('timer'); const T0 = Date.now();
 setInterval(() => { const s = Math.floor((Date.now() - T0) / 1000); timerEl.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }, 1000);
-const isBg = t => t && t.matches && t.matches('#gl, #stage, .bg, body, html, .brand, .brand *, #counter, #credit, #credit *, .slide, #barwrap, #bar');
+const isBg = t => t && t.matches && t.matches('#gl, #stage, .bg, body, html, .brand, .brand *, #counter, #credit, #credit *, #stepdots, #stepdots *, .slide, #barwrap, #bar');
 document.addEventListener('click', e => { if (e.button !== 0 || !isBg(e.target)) return; if (window.getSelection && String(window.getSelection())) return; next(); });
 document.addEventListener('contextmenu', e => { if (!isBg(e.target)) return; e.preventDefault(); prevS(); });
 const start = parseInt((location.hash || '#1').slice(1)) - 1;
